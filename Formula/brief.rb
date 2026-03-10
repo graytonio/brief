@@ -4,7 +4,7 @@
 class Brief < Formula
   desc "Remote standards manager for Claude Code"
   homepage "https://github.com/graytonio/brief"
-  version "0.0.1"
+  version "0.0.2"
   license "MIT"
 
   on_macos do
