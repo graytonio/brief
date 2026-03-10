@@ -37,13 +37,12 @@ pub fn read_settings() -> Result<Value> {
     if !path.exists() {
         return Ok(json!({}));
     }
-    let contents = fs::read_to_string(&path)
-        .with_context(|| format!("Failed to read {}", path.display()))?;
+    let contents =
+        fs::read_to_string(&path).with_context(|| format!("Failed to read {}", path.display()))?;
     if contents.trim().is_empty() {
         return Ok(json!({}));
     }
-    serde_json::from_str(&contents)
-        .with_context(|| format!("Failed to parse {}", path.display()))
+    serde_json::from_str(&contents).with_context(|| format!("Failed to parse {}", path.display()))
 }
 
 /// Writes the settings value back to settings.json, creating parent dirs as needed.
@@ -53,10 +52,9 @@ pub fn write_settings(settings: &Value) -> Result<()> {
         fs::create_dir_all(parent)
             .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
     }
-    let contents = serde_json::to_string_pretty(settings)
-        .context("Failed to serialise settings.json")?;
-    fs::write(&path, contents)
-        .with_context(|| format!("Failed to write {}", path.display()))?;
+    let contents =
+        serde_json::to_string_pretty(settings).context("Failed to serialise settings.json")?;
+    fs::write(&path, contents).with_context(|| format!("Failed to write {}", path.display()))?;
     Ok(())
 }
 

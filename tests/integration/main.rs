@@ -64,8 +64,11 @@ fn test_config_roundtrip() {
 fn test_detect_rust_project() {
     let project_dir = tempfile::tempdir().expect("tempdir");
     // Create a Cargo.toml to simulate a Rust project.
-    fs::write(project_dir.path().join("Cargo.toml"), "[package]\nname=\"test\"")
-        .expect("write Cargo.toml");
+    fs::write(
+        project_dir.path().join("Cargo.toml"),
+        "[package]\nname=\"test\"",
+    )
+    .expect("write Cargo.toml");
 
     // We test the underlying library logic directly here by constructing
     // a minimal LanguageConfig-like structure and walking the directory.
@@ -99,7 +102,10 @@ fn test_detect_finds_file_in_parent() {
             None => break,
         }
     }
-    assert!(found, "Should find Cargo.toml by walking up from subdirectory");
+    assert!(
+        found,
+        "Should find Cargo.toml by walking up from subdirectory"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

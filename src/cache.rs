@@ -163,10 +163,17 @@ pub fn fetch_with_cache(url: &str, ttl_secs: u64) -> Result<String> {
         Err(e) => {
             // Fall back to stale cache with a warning.
             if let Some(stale) = read_cache(url) {
-                eprintln!("brief: warning: fetch failed ({}), using stale cache for {}", e, url);
+                eprintln!(
+                    "brief: warning: fetch failed ({}), using stale cache for {}",
+                    e, url
+                );
                 Ok(stale)
             } else {
-                Err(anyhow::anyhow!("Fetch failed and no cache available for {}: {}", url, e))
+                Err(anyhow::anyhow!(
+                    "Fetch failed and no cache available for {}: {}",
+                    url,
+                    e
+                ))
             }
         }
     }

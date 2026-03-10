@@ -38,10 +38,7 @@ pub fn run_sync(url: &str, local: &mut Config, opts: &SyncOptions) -> Result<Vec
                 }
             }
             Some(existing) if opts.force && existing != remote_url => {
-                changes.push(format!(
-                    "Update global URL: {} → {}",
-                    existing, remote_url
-                ));
+                changes.push(format!("Update global URL: {} → {}", existing, remote_url));
                 if !opts.dry_run {
                     local.global.url = Some(remote_url.clone());
                 }
@@ -71,9 +68,7 @@ pub fn run_sync(url: &str, local: &mut Config, opts: &SyncOptions) -> Result<Vec
             if opts.force {
                 changes.push(format!(
                     "Update {}: {} → {}",
-                    lang,
-                    local.languages[lang].url,
-                    remote_cfg.url
+                    lang, local.languages[lang].url, remote_cfg.url
                 ));
                 if !opts.dry_run {
                     local.languages.insert(lang.clone(), remote_cfg.clone());

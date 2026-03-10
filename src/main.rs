@@ -118,11 +118,19 @@ fn main() {
 fn dispatch(command: Commands) -> Result<()> {
     match command {
         Commands::Init { team_config } => cmd_init(team_config),
-        Commands::Add { language, url, detect } => cmd_add(language, url, detect),
+        Commands::Add {
+            language,
+            url,
+            detect,
+        } => cmd_add(language, url, detect),
         Commands::Remove { language } => cmd_remove(language),
         Commands::SetGlobal { url } => cmd_set_global(url),
         Commands::List => cmd_list(),
-        Commands::Sync { url, force, dry_run } => cmd_sync(url, force, dry_run),
+        Commands::Sync {
+            url,
+            force,
+            dry_run,
+        } => cmd_sync(url, force, dry_run),
         Commands::Update { language } => cmd_update(language),
         Commands::Status => cmd_status(),
         Commands::Inject => {
@@ -172,7 +180,10 @@ fn cmd_init(team_config_url: Option<String>) -> Result<()> {
     if let Some(url) = team_config_url {
         println!("Syncing from team config: {}", url);
         let mut cfg = config::Config::load()?;
-        let opts = sync::SyncOptions { force: false, dry_run: false };
+        let opts = sync::SyncOptions {
+            force: false,
+            dry_run: false,
+        };
         let changes = sync::run_sync(&url, &mut cfg, &opts)?;
         cfg.global.team_config_url = Some(url);
         cfg.save()?;
@@ -485,7 +496,10 @@ fn cmd_status() -> Result<()> {
         } else {
             "not cached".into()
         };
-        println!("  [{}] global   {}  ({})  ← baseline", idx, global_url, cached_note);
+        println!(
+            "  [{}] global   {}  ({})  ← baseline",
+            idx, global_url, cached_note
+        );
         idx += 1;
     }
 
@@ -516,7 +530,12 @@ fn cmd_status() -> Result<()> {
     println!();
     let settings = hook::read_settings().unwrap_or(serde_json::json!({}));
     let hook_status = if hook::is_hook_installed(&settings) {
-        format!("installed (SessionStart in {})", hook::settings_path().map(|p| p.display().to_string()).unwrap_or_default())
+        format!(
+            "installed (SessionStart in {})",
+            hook::settings_path()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default()
+        )
     } else {
         "not installed  (run: brief hook install)".into()
     };
