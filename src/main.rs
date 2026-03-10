@@ -316,11 +316,10 @@ fn cmd_list() -> Result<()> {
     let url_w = rows.iter().map(|r| r.1.len()).max().unwrap_or(50).max(50);
 
     println!(
-        " {:<lang_w$}  {:<url_w$}  {:<7}  {}",
+        " {:<lang_w$}  {:<url_w$}  {:<7}  Last Fetch",
         "Language",
         "URL",
         "Cached",
-        "Last Fetch",
         lang_w = lang_w,
         url_w = url_w
     );
