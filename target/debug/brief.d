@@ -1,0 +1,1 @@
+/Users/graytonw/repos/brief/target/debug/brief: /Users/graytonw/repos/brief/src/cache.rs /Users/graytonw/repos/brief/src/config.rs /Users/graytonw/repos/brief/src/detect.rs /Users/graytonw/repos/brief/src/hook.rs /Users/graytonw/repos/brief/src/inject.rs /Users/graytonw/repos/brief/src/main.rs /Users/graytonw/repos/brief/src/sync.rs
