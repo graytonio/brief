@@ -44,9 +44,8 @@ pub fn run_sync(url: &str, local: &mut Config, opts: &SyncOptions) -> Result<Vec
                 }
             }
             Some(existing) if !opts.force && existing != remote_url => {
-                changes.push(
-                    "Skip global URL (local differs; use --force to overwrite)".to_string()
-                );
+                changes
+                    .push("Skip global URL (local differs; use --force to overwrite)".to_string());
             }
             _ => {}
         }
