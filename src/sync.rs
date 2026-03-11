@@ -4,7 +4,6 @@
 /// Merge rules:
 ///   - Remote languages not present locally are added.
 ///   - Remote languages already present locally are skipped (unless --force).
-///   - The global URL is updated only if --force is passed.
 use anyhow::{Context, Result};
 
 use crate::cache;
@@ -27,29 +26,6 @@ pub fn run_sync(url: &str, local: &mut Config, opts: &SyncOptions) -> Result<Vec
         .with_context(|| format!("Failed to parse remote team config from {}", url))?;
 
     let mut changes: Vec<String> = Vec::new();
-
-    // Merge global URL.
-    if let Some(remote_url) = &remote.global.url {
-        match &local.global.url {
-            None => {
-                changes.push(format!("Set global URL to {}", remote_url));
-                if !opts.dry_run {
-                    local.global.url = Some(remote_url.clone());
-                }
-            }
-            Some(existing) if opts.force && existing != remote_url => {
-                changes.push(format!("Update global URL: {} → {}", existing, remote_url));
-                if !opts.dry_run {
-                    local.global.url = Some(remote_url.clone());
-                }
-            }
-            Some(existing) if !opts.force && existing != remote_url => {
-                changes
-                    .push("Skip global URL (local differs; use --force to overwrite)".to_string());
-            }
-            _ => {}
-        }
-    }
 
     // Merge team_config_url.
     if let Some(remote_tc) = &remote.global.team_config_url {

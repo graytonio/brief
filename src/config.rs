@@ -8,21 +8,18 @@ use std::path::PathBuf;
 /// Top-level configuration stored in ~/.brief/config.toml.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
-    /// Global standards entry — injected into every session.
+    /// Global settings (TTL, team config URL). Per-session standards live in `languages`.
     #[serde(default)]
     pub global: GlobalConfig,
 
-    /// Per-language entries keyed by language name.
+    /// Standards entries keyed by name. Entries with no `detect` files match every session.
     #[serde(default)]
     pub languages: HashMap<String, LanguageConfig>,
 }
 
-/// Global section of the config.
+/// Global section of the config (metadata only — no standards URL).
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GlobalConfig {
-    /// Remote URL returning plain-text CLAUDE.md content.
-    pub url: Option<String>,
-
     /// How long (seconds) to use a cached copy before re-fetching. Default: 3600.
     #[serde(default = "default_cache_ttl")]
     pub cache_ttl: u64,

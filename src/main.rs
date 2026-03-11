@@ -54,12 +54,6 @@ enum Commands {
         language: String,
     },
 
-    /// Set the global standards URL applied to all sessions.
-    SetGlobal {
-        /// Remote URL returning plain-text CLAUDE.md content.
-        url: String,
-    },
-
     /// List all registered languages, URLs, and cache status.
     List,
 
@@ -124,7 +118,6 @@ fn dispatch(command: Commands) -> Result<()> {
             detect,
         } => cmd_add(language, url, detect),
         Commands::Remove { language } => cmd_remove(language),
-        Commands::SetGlobal { url } => cmd_set_global(url),
         Commands::List => cmd_list(),
         Commands::Sync {
             url,
@@ -225,21 +218,14 @@ fn which_brief() -> Option<PathBuf> {
 fn cmd_add(language: String, url: String, detect_arg: Option<String>) -> Result<()> {
     let mut cfg = config::Config::load()?;
 
-    let detect_files = if let Some(raw) = detect_arg {
+    let detect_files: Vec<String> = if let Some(raw) = detect_arg {
         raw.split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect()
     } else {
-        let defaults = config::default_detect_files(&language);
-        if defaults.is_empty() {
-            anyhow::bail!(
-                "No default detection files for language '{}'. \
-                 Use --detect <file>[,<file>...] to specify them.",
-                language
-            );
-        }
-        defaults
+        config::default_detect_files(&language)
+        // Empty vec (no defaults, no --detect) means this entry matches every session.
     };
 
     cfg.languages.insert(
@@ -272,18 +258,6 @@ fn cmd_remove(language: String) -> Result<()> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// set-global
-// ─────────────────────────────────────────────────────────────────────────────
-
-fn cmd_set_global(url: String) -> Result<()> {
-    let mut cfg = config::Config::load()?;
-    cfg.global.url = Some(url.clone());
-    cfg.save()?;
-    println!("Global URL set to {}", url);
-    Ok(())
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // list
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -292,11 +266,6 @@ fn cmd_list() -> Result<()> {
 
     // Collect rows: (language, url, cached, last_fetch_display)
     let mut rows: Vec<(String, String, bool, String)> = Vec::new();
-
-    if let Some(url) = &cfg.global.url {
-        let (cached, last_fetch) = cache_display(url);
-        rows.push(("global".into(), url.clone(), cached, last_fetch));
-    }
 
     let mut lang_names: Vec<&String> = cfg.languages.keys().collect();
     lang_names.sort();
@@ -376,10 +345,7 @@ fn cmd_sync(url_arg: Option<String>, force: bool, dry_run: bool) -> Result<()> {
 
     let url = url_arg
         .or_else(|| cfg.global.team_config_url.clone())
-        .context(
-            "No URL provided and no team_config_url in config. \
-             Run: brief sync <url>  or  brief set-global ...",
-        )?;
+        .context("No URL provided and no team_config_url in config. Run: brief sync <url>")?;
 
     println!("Syncing from: {}", url);
     if dry_run {
@@ -414,26 +380,14 @@ fn cmd_update(language: Option<String>) -> Result<()> {
 
     match language {
         Some(lang) => {
-            if lang == "global" {
-                let url = cfg
-                    .global
-                    .url
-                    .as_deref()
-                    .context("No global URL configured")?;
-                update_one("global", url, ttl)?;
-            } else {
-                let lc = cfg
-                    .languages
-                    .get(&lang)
-                    .with_context(|| format!("Language '{}' is not registered", lang))?;
-                update_one(&lang, &lc.url, ttl)?;
-            }
+            let lc = cfg
+                .languages
+                .get(&lang)
+                .with_context(|| format!("'{}' is not registered", lang))?;
+            update_one(&lang, &lc.url, ttl)?;
         }
         None => {
             // Re-fetch all.
-            if let Some(url) = &cfg.global.url {
-                update_one("global", url, ttl)?;
-            }
             let mut langs: Vec<&String> = cfg.languages.keys().collect();
             langs.sort();
             for lang in langs {
@@ -471,58 +425,37 @@ fn cmd_status() -> Result<()> {
 
     println!("Current directory: {}", cwd.display());
 
-    // Detect language.
-    let detected = detect::detect_language(&cwd, &cfg.languages);
-    match &detected {
-        Some(d) => println!(
-            "Detected language: {}  (found {} at {})",
-            d.language,
-            d.file_found,
-            d.directory.display()
-        ),
-        None => println!("Detected language: none"),
-    }
+    let matches = detect::detect_languages(&cwd, &cfg.languages);
 
     println!();
     println!("Injection order (later = higher priority):");
 
-    let mut idx = 1usize;
-
-    if let Some(global_url) = &cfg.global.url {
-        let age = cache_age_display(global_url);
-        let cached_note = if cache::read_cache(global_url).is_some() {
-            format!("cached, {}", age)
-        } else {
-            "not cached".into()
-        };
-        println!(
-            "  [{}] global   {}  ({})  ← baseline",
-            idx, global_url, cached_note
-        );
-        idx += 1;
-    }
-
-    if let Some(d) = &detected {
-        if let Some(lc) = cfg.languages.get(&d.language) {
-            let age = cache_age_display(&lc.url);
-            let cached_note = if cache::read_cache(&lc.url).is_some() {
-                format!("cached, {}", age)
-            } else {
-                "not cached".into()
-            };
-            println!(
-                "  [{}] {}     {}  ({})  ← overrides [{}]",
-                idx,
-                d.language,
-                lc.url,
-                cached_note,
-                idx - 1
-            );
+    if matches.is_empty() {
+        println!("  (nothing — no matching standards configured)");
+    } else {
+        for (idx, d) in matches.iter().enumerate() {
+            if let Some(lc) = cfg.languages.get(&d.language) {
+                let age = cache_age_display(&lc.url);
+                let cached_note = if cache::read_cache(&lc.url).is_some() {
+                    format!("cached, {}", age)
+                } else {
+                    "not cached".into()
+                };
+                let match_note = if d.file_found.is_empty() {
+                    "(always)".into()
+                } else {
+                    format!("(found {} at {})", d.file_found, d.directory.display())
+                };
+                println!(
+                    "  [{}] {}  {}  {}  {}",
+                    idx + 1,
+                    d.language,
+                    lc.url,
+                    cached_note,
+                    match_note
+                );
+            }
         }
-    }
-
-    if cfg.global.url.is_none() && detected.is_none() {
-        println!("  (nothing — no global URL and no language detected)");
     }
 
     // Hook status.

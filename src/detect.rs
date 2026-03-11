@@ -1,8 +1,9 @@
 /// Project type detection by walking up the directory tree.
 ///
-/// For each registered language, we look for the configured detection files
+/// For each registered entry, we check if its detection files are found
 /// starting from the given directory and moving toward the filesystem root.
-/// The first language whose detection file is found wins.
+/// Entries with no detection files match every session (always loaded).
+/// All matching entries are returned, in alphabetical order.
 use std::path::{Path, PathBuf};
 
 use crate::config::LanguageConfig;
@@ -13,9 +14,9 @@ use std::collections::HashMap;
 pub struct DetectResult {
     /// The language name as registered in the config.
     pub language: String,
-    /// The detection file that was found.
+    /// The detection file that was found, or empty string for always-match entries.
     pub file_found: String,
-    /// The directory where the detection file was found.
+    /// The directory where the detection file was found, or cwd for always-match entries.
     pub directory: PathBuf,
 }
 
@@ -37,28 +38,33 @@ fn find_file_upward(start: &Path, filenames: &[String]) -> Option<(String, PathB
     }
 }
 
-/// Detects the project language for the given directory using the registered language configs.
+/// Returns all matching entries for the given directory.
 ///
-/// Languages are checked in alphabetical order (deterministic). The first match wins.
-pub fn detect_language(
+/// Entries are checked in alphabetical order (deterministic).
+/// Entries with an empty `detect` list always match.
+/// Entries with detection files match if any file is found walking up from cwd.
+pub fn detect_languages(
     cwd: &Path,
     languages: &HashMap<String, LanguageConfig>,
-) -> Option<DetectResult> {
-    // Sort for deterministic ordering.
+) -> Vec<DetectResult> {
     let mut entries: Vec<(&String, &LanguageConfig)> = languages.iter().collect();
     entries.sort_by_key(|(name, _)| name.as_str());
 
+    let mut results = Vec::new();
     for (language, lang_cfg) in entries {
         if lang_cfg.detect.is_empty() {
-            continue;
-        }
-        if let Some((file_found, directory)) = find_file_upward(cwd, &lang_cfg.detect) {
-            return Some(DetectResult {
+            results.push(DetectResult {
+                language: language.clone(),
+                file_found: String::new(),
+                directory: cwd.to_path_buf(),
+            });
+        } else if let Some((file_found, directory)) = find_file_upward(cwd, &lang_cfg.detect) {
+            results.push(DetectResult {
                 language: language.clone(),
                 file_found,
                 directory,
             });
         }
     }
-    None
+    results
 }

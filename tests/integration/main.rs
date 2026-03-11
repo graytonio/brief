@@ -213,9 +213,6 @@ url = "https://local.example.com/rust/CLAUDE.md"
 detect = ["Cargo.toml"]
 "#;
     let remote_toml = r#"
-[global]
-url = "https://remote.example.com/CLAUDE.md"
-
 [languages.kotlin]
 url = "https://remote.example.com/kotlin/CLAUDE.md"
 detect = ["build.gradle.kts", "build.gradle"]
