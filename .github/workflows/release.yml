@@ -119,14 +119,13 @@ jobs:
 
           sed -i \
             -e "s/version \".*\"/version \"${VERSION}\"/" \
-            -e "s/PLACEHOLDER_MACOS_AARCH64_SHA256/${SHA_MACOS_AARCH64}/" \
-            -e "s/PLACEHOLDER_MACOS_X86_64_SHA256/${SHA_MACOS_X86_64}/" \
-            -e "s/PLACEHOLDER_LINUX_AARCH64_SHA256/${SHA_LINUX_AARCH64}/" \
-            -e "s/PLACEHOLDER_LINUX_X86_64_SHA256/${SHA_LINUX_X86_64}/" \
             Formula/brief.rb
 
-          # Also replace already-populated SHA lines on subsequent releases
-          # (sed above handles version bump; SHAs are already real values, not placeholders)
+          # Update each SHA by matching the sha256 line following the relevant URL line
+          sed -i "/brief-macos-aarch64/{n; s/sha256 \"[^\"]*\"/sha256 \"${SHA_MACOS_AARCH64}\"/}" Formula/brief.rb
+          sed -i "/brief-macos-x86_64/{n; s/sha256 \"[^\"]*\"/sha256 \"${SHA_MACOS_X86_64}\"/}" Formula/brief.rb
+          sed -i "/brief-linux-aarch64/{n; s/sha256 \"[^\"]*\"/sha256 \"${SHA_LINUX_AARCH64}\"/}" Formula/brief.rb
+          sed -i "/brief-linux-x86_64/{n; s/sha256 \"[^\"]*\"/sha256 \"${SHA_LINUX_X86_64}\"/}" Formula/brief.rb
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
