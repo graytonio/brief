@@ -189,7 +189,9 @@ impl AuthProvider for GitHubDeviceFlow {
             interval: u64,
         }
 
-        let dc: DeviceCodeResponse = resp.json().context("Failed to parse device code response")?;
+        let dc: DeviceCodeResponse = resp
+            .json()
+            .context("Failed to parse device code response")?;
 
         // ── Step 2: prompt user ───────────────────────────────────────────────
         println!();
@@ -229,10 +231,7 @@ impl AuthProvider for GitHubDeviceFlow {
                 .form(&[
                     ("client_id", GITHUB_CLIENT_ID),
                     ("device_code", dc.device_code.as_str()),
-                    (
-                        "grant_type",
-                        "urn:ietf:params:oauth:grant-type:device_code",
-                    ),
+                    ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
                 ])
                 .send()
                 .context("Failed to poll GitHub for token")?;

@@ -520,10 +520,7 @@ fn cmd_auth_login(provider: &str) -> Result<()> {
 
     let p: Box<dyn AuthProvider> = match provider {
         "github" => Box::new(auth::GitHubDeviceFlow),
-        other => anyhow::bail!(
-            "Unknown provider '{}'. Supported providers: github",
-            other
-        ),
+        other => anyhow::bail!("Unknown provider '{}'. Supported providers: github", other),
     };
 
     println!("Logging in with {}...", p.name());
