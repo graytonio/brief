@@ -89,21 +89,7 @@ pub fn invalidate_cache(url: &str) -> Result<()> {
 
 /// Reads the optional auth token from env var or ~/.brief/.token.
 pub fn read_token() -> Option<String> {
-    // 1. Environment variable takes precedence.
-    if let Ok(token) = std::env::var("CLAUDE_STANDARDS_TOKEN") {
-        if !token.is_empty() {
-            return Some(token);
-        }
-    }
-    // 2. Fall back to token file.
-    let path = config::token_path().ok()?;
-    let contents = fs::read_to_string(path).ok()?;
-    let token = contents.trim().to_string();
-    if token.is_empty() {
-        None
-    } else {
-        Some(token)
-    }
+    crate::auth::resolve_token()
 }
 
 /// Fetches the given URL, sending an auth token if one is configured.

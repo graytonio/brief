@@ -14,12 +14,7 @@ When a Claude Code session starts, `brief inject` is called by a hook you instal
 2. Fetches (or uses a cached copy of) the standards for that language
 3. Outputs the assembled content to stdout, which Claude Code injects as session context
 
-Standards are loaded in two layers:
-
-| Priority | Layer | Description |
-|----------|-------|-------------|
-| 1 — lowest | **global** | Always injected. Baseline rules for every session. |
-| 2 — highest | **language-specific** | Injected after global. Overrides any conflicting global rules. |
+Multiple entries can match a single session and are injected in order. Entries without `detect` files match every session and act as a baseline; entries with `detect` files are injected after, taking higher priority.
 
 ---
 
@@ -90,13 +85,13 @@ brief add scala https://raw.githubusercontent.com/ORG/REPO/main/scala/CLAUDE.md 
 | typescript | `package.json` |
 | go | `go.mod` |
 
-### Set a global baseline
+### Add a baseline (always-injected) entry
+
+Register an entry with no `--detect` files and it will be injected into every session:
 
 ```sh
-brief set-global https://raw.githubusercontent.com/ORG/REPO/main/CLAUDE.md
+brief add baseline https://raw.githubusercontent.com/ORG/REPO/main/CLAUDE.md
 ```
-
-This URL is injected into every session regardless of language.
 
 ### Sync from a team config
 
@@ -122,11 +117,10 @@ brief status
 
 ```
 Current directory: /Users/grayton/projects/my-service
-Detected language: rust  (found Cargo.toml at /Users/grayton/projects/my-service)
 
 Injection order (later = higher priority):
-  [1] global   https://.../CLAUDE.md             (cached, 23 min old)  ← baseline
-  [2] rust     https://.../rust/CLAUDE.md         (cached, 23 min old)  ← overrides [1]
+  [1] baseline  https://.../CLAUDE.md             (cached, 23 min old)  (always)
+  [2] rust      https://.../rust/CLAUDE.md         (cached, 23 min old)  (found Cargo.toml at /Users/grayton/projects/my-service)
 
 Hook status: installed (SessionStart in ~/.claude/settings.json)
 ```
@@ -140,7 +134,7 @@ brief list
 ```
  Language  URL                                                   Cached   Last Fetch
  ────────  ────────────────────────────────────────────────────  ───────  ──────────────────
- global    https://.../CLAUDE.md                                 ✓        2026-03-10 09:14
+ baseline  https://.../CLAUDE.md                                 ✓        2026-03-10 09:14
  rust      https://.../rust/CLAUDE.md                            ✓        2026-03-10 09:14
  kotlin    https://.../kotlin/CLAUDE.md                          ✗        never
 ```
@@ -179,8 +173,11 @@ Publish a `.brief.toml` file to a URL your team can reach. The format mirrors `~
 
 ```toml
 [global]
-url = "https://raw.githubusercontent.com/ORG/REPO/main/CLAUDE.md"
 cache_ttl = 3600
+
+[languages.baseline]
+url    = "https://raw.githubusercontent.com/ORG/REPO/main/CLAUDE.md"
+detect = []
 
 [languages.rust]
 url    = "https://raw.githubusercontent.com/ORG/REPO/main/rust/CLAUDE.md"
@@ -207,9 +204,12 @@ Config file: `~/.brief/config.toml`
 
 ```toml
 [global]
-url            = "https://..."   # Global baseline URL
-cache_ttl      = 3600            # Cache TTL in seconds (default: 3600)
+cache_ttl       = 3600           # Cache TTL in seconds (default: 3600)
 team_config_url = "https://..."  # URL for 'brief sync' with no arguments
+
+[languages.baseline]
+url    = "https://..."
+detect = []                      # Empty detect = always injected
 
 [languages.rust]
 url    = "https://..."

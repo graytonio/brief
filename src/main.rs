@@ -1,6 +1,7 @@
 /// brief — Remote Standards Manager for Claude Code.
 ///
 /// CLI entry point and command dispatch.
+mod auth;
 mod cache;
 mod config;
 mod detect;
@@ -86,6 +87,12 @@ enum Commands {
         #[command(subcommand)]
         action: HookAction,
     },
+
+    /// Manage authentication credentials.
+    Auth {
+        #[command(subcommand)]
+        action: AuthAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -94,6 +101,20 @@ enum HookAction {
     Install,
     /// Remove the SessionStart hook entry.
     Uninstall,
+}
+
+#[derive(Subcommand)]
+enum AuthAction {
+    /// Authenticate via an OAuth Device Flow (default provider: github).
+    Login {
+        /// Auth provider to use.
+        #[arg(long, default_value = "github")]
+        provider: String,
+    },
+    /// Remove stored credentials.
+    Logout,
+    /// Show current authentication status.
+    Status,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -133,6 +154,11 @@ fn dispatch(command: Commands) -> Result<()> {
         Commands::Hook { action } => match action {
             HookAction::Install => hook::install_hook(),
             HookAction::Uninstall => hook::uninstall_hook(),
+        },
+        Commands::Auth { action } => match action {
+            AuthAction::Login { provider } => cmd_auth_login(&provider),
+            AuthAction::Logout => cmd_auth_logout(),
+            AuthAction::Status => cmd_auth_status(),
         },
     }
 }
@@ -483,4 +509,74 @@ fn cache_age_display(url: &str) -> String {
         Some(secs) => format!("{} hr old", secs / 3600),
         None => "never fetched".into(),
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// auth
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn cmd_auth_login(provider: &str) -> Result<()> {
+    use auth::AuthProvider;
+
+    let p: Box<dyn AuthProvider> = match provider {
+        "github" => Box::new(auth::GitHubDeviceFlow),
+        other => anyhow::bail!(
+            "Unknown provider '{}'. Supported providers: github",
+            other
+        ),
+    };
+
+    println!("Logging in with {}...", p.name());
+    let token = p.login()?;
+    auth::write_stored_token(&token)?;
+    println!("Authenticated successfully.");
+    Ok(())
+}
+
+fn cmd_auth_logout() -> Result<()> {
+    match auth::read_stored_token() {
+        Some(_) => {
+            auth::delete_stored_token()?;
+            println!("Logged out.");
+        }
+        None => println!("No stored credentials found."),
+    }
+    Ok(())
+}
+
+fn cmd_auth_status() -> Result<()> {
+    // Env var takes priority — show it and return early.
+    if let Ok(val) = std::env::var("CLAUDE_STANDARDS_TOKEN") {
+        if !val.is_empty() {
+            println!("Authenticated via CLAUDE_STANDARDS_TOKEN environment variable.");
+            return Ok(());
+        }
+    }
+
+    match auth::read_stored_token() {
+        Some(t) => {
+            let masked = if t.token.len() > 8 {
+                format!("{}****", &t.token[..4])
+            } else {
+                "****".into()
+            };
+            println!("Provider:   {}", t.provider);
+            println!("Token type: {}", t.token_type);
+            println!("Token:      {}", masked);
+            if let Some(scope) = &t.scope {
+                println!("Scope:      {}", scope);
+            }
+            if let Some(ts) = t.issued_at {
+                if let Some(dt) = chrono::DateTime::from_timestamp(ts as i64, 0) {
+                    println!("Stored at:  {}", dt.format("%Y-%m-%d %H:%M UTC"));
+                }
+            }
+        }
+        None => {
+            println!("Not authenticated.");
+            println!("Run `brief auth login` to authenticate via GitHub Device Flow,");
+            println!("or set the CLAUDE_STANDARDS_TOKEN environment variable.");
+        }
+    }
+    Ok(())
 }
